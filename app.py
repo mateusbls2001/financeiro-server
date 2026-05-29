@@ -14,7 +14,7 @@ LORA_REG  = "/app/fonts/Lora-Regular.ttf"
 FB_BOLD   = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 FB_REG    = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
-def load_font(bold=True, size=48):
+def load_font(bold=False, size=27):
     paths = [LORA_BOLD, FB_BOLD] if bold else [LORA_REG, FB_REG]
     for p in paths:
         try: return ImageFont.truetype(p, size)
@@ -24,16 +24,8 @@ def load_font(bold=True, size=48):
 # ── CONFIG ─────────────────────────────────────────────────────────────────────
 W = H      = 1080
 BG         = (0, 0, 0)
-TEXT_WHITE = (255, 255, 255)
+TEXT_COLOR = (210, 210, 210)
 HANDLE     = "@pensarfinanceiro_01"
-
-KEYWORDS = [
-    "rico", "pobre", "dinheiro", "investir", "investimento",
-    "juros", "patrimônio", "liberdade", "riqueza", "lucro",
-    "salário", "dívida", "poupar", "gastar", "inflação",
-    "tempo", "nunca", "sempre", "não", "mais", "menos",
-    "primeiro", "único", "maior", "melhor", "pior"
-]
 
 # ── MUSIC ──────────────────────────────────────────────────────────────────────
 def get_random_music():
@@ -65,53 +57,24 @@ def create_frame(phrase, reference=""):
     img  = Image.new('RGB', (W, H), BG)
     draw = ImageDraw.Draw(img)
 
-    # Linha decorativa topo
-    draw.rectangle([80, 88, 200, 91], fill=(40, 40, 40))
-    draw.rectangle([80, 88, 100, 91], fill=TEXT_WHITE)
+    font_main   = load_font(bold=False, size=27)
+    font_handle = load_font(bold=False, size=20)
 
-    font_main   = load_font(bold=True,  size=25)
-    font_ref    = load_font(bold=False, size=24)
-    font_handle = load_font(bold=False, size=22)
-
-    lines       = wrap_text(draw, phrase, font_main, W - 160)
-    line_height = 78
+    lines       = wrap_text(draw, phrase, font_main, W - 200)
+    line_height = 42
     total_h     = len(lines) * line_height
-    y_start     = (H - total_h) // 2 - 30
+    y_start     = (H - total_h) // 2
 
     for line in lines:
-        words     = line.split()
-        total_w   = sum(draw.textbbox((0,0), w + " ", font=font_main)[2] for w in words)
-        x_word    = (W - total_w) // 2
-
-        for word in words:
-            word_clean = word.lower().strip(".,!?;:")
-            is_kw      = word_clean in KEYWORDS
-            f          = load_font(bold=True, size=25)
-            color      = TEXT_WHITE if is_kw else (190, 190, 190)
-            draw.text((x_word, y_start), word + " ", font=f, fill=color)
-            wb         = draw.textbbox((0, 0), word + " ", font=f)
-            x_word    += wb[2] - wb[0]
-
+        bb = draw.textbbox((0, 0), line, font=font_main)
+        tw = bb[2] - bb[0]
+        draw.text(((W - tw) // 2, y_start), line, font=font_main, fill=TEXT_COLOR)
         y_start += line_height
-
-    # Separador
-    y_sep = y_start + 28
-    draw.rectangle([(W-60)//2, y_sep, (W+60)//2, y_sep+1], fill=(60, 60, 60))
-
-    # Reference
-    if reference:
-        bb_r = draw.textbbox((0, 0), reference.upper(), font=font_ref)
-        draw.text(((W - (bb_r[2]-bb_r[0]))//2, y_sep+20),
-                  reference.upper(), font=font_ref, fill=(70, 70, 70))
 
     # Handle
     bb_h = draw.textbbox((0, 0), HANDLE, font=font_handle)
-    draw.text(((W - (bb_h[2]-bb_h[0]))//2, H-60),
+    draw.text(((W - (bb_h[2] - bb_h[0])) // 2, H - 60),
               HANDLE, font=font_handle, fill=(50, 50, 50))
-
-    # Linha decorativa fundo
-    draw.rectangle([W-200, H-92, W-80, H-89], fill=(30, 30, 30))
-    draw.rectangle([W-100, H-92, W-80, H-89], fill=(60, 60, 60))
 
     return img
 
@@ -148,7 +111,7 @@ def health():
 
 @app.route('/generate-image-url', methods=['POST'])
 def generate_image_url():
-    data = request.get_json(force=True)
+    data      = request.get_json(force=True)
     phrase    = data.get('phrase', '').strip()
     reference = data.get('reference', '').strip()
     if not phrase:
